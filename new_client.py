@@ -60,16 +60,13 @@ def send(event=None):
     my_msg.set('')
 
 
-msg_frame = Frame(root, bg='#e6e6e6')
+scrollbar = Scrollbar(root)
+scrollbar.grid(column=2, row=0, sticky=W)
 
-scrollbar = Scrollbar(msg_frame)
-scrollbar.pack(side=RIGHT, fill=Y)
+msg_list = Canvas(root, yscrollcommand=scrollbar.set, width=355, height=250, bg='#e9e9e9')
+msg_list.grid(row=0, columnspan=2)
 
-msg_list = Listbox(msg_frame , yscrollcommand=scrollbar.set, width=40, height=15)
-msg_list.pack(side=TOP, fill=Y)
-
-msg_frame.grid(columnspan=2)
-
+scrollbar.config(command=msg_list.yview)
 
 my_msg = StringVar()
 my_msg.set('Type your message here')
