@@ -41,7 +41,7 @@ def handle_client(client, addr):
 
     name = client.recv(1024)
 
-    if name == b'{GHOST}':
+    if name == b'{GHOST}' or name == b'\quit':
         return
 
     lock.acquire()
