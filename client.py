@@ -29,6 +29,7 @@ print(s.recv(1024).decode())
 # Clients chooses name
 s.send(bytes(input('Choose a name: '), 'utf-8'))
 
+
 recv_thread = Thread(target=receiver)
 recv_thread.start()
 

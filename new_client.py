@@ -23,6 +23,7 @@ def my_print(msg, sending=False):
     if sending:
         anchor = NE
         x = msg_list.winfo_width() # width of canvas
+        my_msg.set('')
 
     item_handler = msg_list.create_text(
         x, curr_y,
@@ -31,15 +32,14 @@ def my_print(msg, sending=False):
         text=msg
     )
 
-    my_msg.set('Type your message here')
     curr_y = msg_list.bbox(item_handler)[3] + msg_spacing
 
     print_LOCK.release()
 
 
 def send(event=None):
-    my_print(my_msg.get(), True)
     s.send(bytes(my_msg.get(), 'utf-8'))
+    my_print(my_msg.get(), True)
     # my_print(my_msg.get(), False)
 
 
@@ -54,10 +54,10 @@ def receiver():
 
 
 def on_closing():
-    if messagebox.askokcancel("Quit", "Do you want to quit?"):
-        s.send(bytes('\quit', 'utf-8'))
-        s.close()
-        root.destroy()
+    # if messagebox.askokcancel("Quit", "Do you want to quit?"):
+    s.send(bytes('\quit', 'utf-8'))
+    s.close()
+    root.destroy()
 
 
 """GUI SETUP"""

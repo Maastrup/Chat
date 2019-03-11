@@ -36,19 +36,22 @@ def handle_client(client, addr):
     print('Client connected with address {}:{}'.format(addr[0], addr[1]))
 
     # Welcome the client
-    msg = 'Welcome to the chat program. Please enter your chosen name in the messagefield and press enter' # Please enter a chat channel (1 through 5) and press enter: '
+    msg = 'Welcome to the chat program. Please enter your chosen name in the message field and press enter' # Please enter a chat channel (1 through 5) and press enter: '
     client.sendall(bytes(msg, 'utf-8'))
 
+    print('Getting name...')
     name = client.recv(1024)
 
-    if name == b'{GHOST}':
+    print('Name is ' + name.decode())
+
+    if name == b'{GHOST}' or name == b'\quit':
         return
 
     lock.acquire()
     clients[client] = name
     lock.release()
 
-    client.send(bytes('Hi {}, now you can start chatting with your friends', 'utf-8'))
+    client.sendall(bytes('Hi {}, now you can start chatting with your friends'.format(name.decode()), 'utf-8'))
 
     while True:
         try:
