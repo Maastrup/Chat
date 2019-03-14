@@ -23,6 +23,7 @@ def my_print(msg, sending=False):
     if sending:
         anchor = NE
         x = msg_list.winfo_width() # width of canvas
+        my_msg.set('')
 
     item_handler = msg_list.create_text(
         x, curr_y,
@@ -31,7 +32,6 @@ def my_print(msg, sending=False):
         text=msg
     )
 
-    my_msg.set('')
     curr_y = msg_list.bbox(item_handler)[3] + msg_spacing
 
     print_LOCK.release()
