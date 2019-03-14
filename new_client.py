@@ -55,10 +55,10 @@ def receiver():
 
 
 def on_closing():
-    if messagebox.askokcancel("Quit", "Do you want to quit?"):
-        s.send(bytes('\quit', 'utf-8'))
-        s.close()
-        root.destroy()
+    # if messagebox.askokcancel("Quit", "Do you want to quit?"):
+    s.send(bytes('\quit', 'utf-8'))
+    s.close()
+    root.destroy()
 
 
 """GUI SETUP"""
