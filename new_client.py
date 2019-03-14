@@ -31,15 +31,16 @@ def my_print(msg, sending=False):
         text=msg
     )
 
-    my_msg.set('Type your message here')
+    my_msg.set('')
     curr_y = msg_list.bbox(item_handler)[3] + msg_spacing
 
     print_LOCK.release()
 
 
 def send(event=None):
-    my_print(my_msg.get(), True)
-    s.send(bytes(my_msg.get(), 'utf-8'))
+    msg = my_msg.get()
+    my_print(msg, True)
+    s.send(bytes(msg, 'utf-8'))
     # my_print(my_msg.get(), False)
 
 
@@ -61,8 +62,8 @@ def on_closing():
 
 
 """GUI SETUP"""
-scrollbar = Scrollbar(root)
-scrollbar.grid(column=2, row=0, sticky=W+N+S)
+scrollbar = Scrollbar(root, orient=VERTICAL)
+scrollbar.grid(column=2, row=0, sticky=N+S)
 
 msg_list = Canvas(
     root,
@@ -91,6 +92,9 @@ button = Button(
     command=send
 )
 button.grid(column=1, row=1, sticky=N+W)
+
+root.update()
+msg_list.config(scrollregion=msg_list.bbox('all'))
 
 
 """CONNECTION SETUP"""

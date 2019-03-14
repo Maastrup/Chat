@@ -48,7 +48,7 @@ def handle_client(client, addr):
     clients[client] = name
     lock.release()
 
-    client.send(bytes('Hi {}, now you can start chatting with your friends', 'utf-8'))
+    client.send(bytes('Hi {}, now you can start chatting with your friends'.format(name.decode()), 'utf-8'))
 
     while True:
         try:
