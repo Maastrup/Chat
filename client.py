@@ -3,31 +3,37 @@
 import shutil
 import socket
 from threading import Thread
+import my_encryption
+
+s = socket.socket()
+host = socket.gethostname()
+port = 6000
+
+# """ Encryption globals """
+# key = b'Sixteen byte keySixteen byte key'
+# cipher = AES.new(key, AES.MODE_ECB)
+# padding = 'acbdefghijklmnop'
 
 
 def receiver():
     while True:
         try:
-            received = s.recv(1024).decode()
+            received = s.recv(1024)
+            msg = my_encryption.unpack(received)
             print('\r' + ' '*20, end='\r')
-            print(received)
+            print(msg)
             print('Your message:', end=' ', flush=True)
         except OSError:
             print('! -- Disconnected -- !')
             return
 
 
-s = socket.socket()
-
-host = socket.gethostname()
-port = 6000
-
 s.connect((host, port))
 
 # Receives welcome msg
-print(s.recv(1024).decode())
+print(my_encryption.unpack(s.recv(1024)))
 # Clients chooses name
-s.send(bytes(input('Choose a name: '), 'utf-8'))
+s.send(my_encryption.pack(input('Choose a name: ')))
 
 
 recv_thread = Thread(target=receiver)
@@ -45,4 +51,4 @@ while True:
         columns, rows = shutil.get_terminal_size()
         print('\r' + ' ' * columns, end='\r')
         print('{:>{width}}'.format(msg, width=columns))
-        s.sendall(bytes(msg, 'utf-8'))
+        s.sendall(my_encryption.pack(msg))

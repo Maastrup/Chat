@@ -2,23 +2,25 @@
 
 import socket
 from threading import Thread, Lock
+import my_encryption
 
-
+""" Socket globals """
 clients = {}
-lock = Lock()
+LOCK = Lock()
 server_status = True
 
 
+
 def broadcast(msg, name=None):
-    lock.acquire()
+    LOCK.acquire()
     print('Broadcasting to {} client(s)'.format(len(clients)))
     for client in clients:
         if name == None:
             client.send(msg)
         elif clients[client] != name:
-            msg_to_broadc = name + b': ' + msg
+            msg_to_broadc = my_encryption.pack(name + ': ' + msg)
             client.send(msg_to_broadc)
-    lock.release()
+    LOCK.release()
 
 
 def accept_clients():
@@ -37,46 +39,47 @@ def handle_client(client, addr):
 
     # Welcome the client
     msg = 'Welcome to the chat program. Please enter your chosen name in the message field and press enter' # Please enter a chat channel (1 through 5) and press enter: '
-    client.sendall(bytes(msg, 'utf-8'))
+    client.sendall(my_encryption.pack(msg))
 
     print('Getting name...')
-    name = client.recv(1024)
+    name = my_encryption.unpack(client.recv(1024))
 
-    print('Name is ' + name.decode())
+    print('Name is ' + name)
 
-    if name == b'{GHOST}' or name == b'\quit':
+    if name == '{GHOST}' or name == '\quit':
         return
 
-    lock.acquire()
+    LOCK.acquire()
     clients[client] = name
-    lock.release()
+    LOCK.release()
 
-    client.sendall(bytes('Hi {}, now you can start chatting with your friends'.format(name.decode()), 'utf-8'))
+    client.sendall(my_encryption.pack('Hi {}, now you can start chatting with your friends'.format(name)))
 
     while True:
         try:
             received = client.recv(1024)
-            if received.decode() == '\quit':
+            msg = my_encryption.unpack(received)
+            if msg == '\quit':
                 print('! -- Client disconnected -- !')
 
-                lock.acquire()
+                LOCK.acquire()
                 del clients[client]
-                lock.release()
+                LOCK.release()
 
-                exit_msg = name + b' has left the chatroom'
+                exit_msg = name + ' has left the chatroom'
                 broadcast(exit_msg)
 
                 return
             else:
                 # msg = name + received
-                broadcast(received, clients[client])
+                broadcast(msg, clients[client])
 
         except OSError:
             print('! -- Client disconnected -- !')
 
-            lock.acquire()
+            LOCK.acquire()
             del clients[client]
-            lock.release()
+            LOCK.release()
 
             return
 
@@ -95,7 +98,7 @@ def ghost_client():
     port = 6000
 
     s.connect((host, port))
-    s.send(bytes('{GHOST}', 'utf-8'))
+    s.send(my_encryption.pack('{GHOST}'))
     s.shutdown(socket.SHUT_RDWR)
     s.close()
 
