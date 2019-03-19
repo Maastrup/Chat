@@ -2,13 +2,15 @@
 
 import socket
 from threading import Thread, Lock
-import my_encryption
+from my_encryption import MyAES
 
 """ Socket globals """
 clients = {}
 LOCK = Lock()
 server_status = True
 
+""" Encryption global until Diffie-Hellman is setup """
+crypto = MyAES(b'Sixteen byte keySixteen byte key')
 
 
 def broadcast(msg, name=None):
@@ -18,7 +20,7 @@ def broadcast(msg, name=None):
         if name == None:
             client.send(msg)
         elif clients[client] != name:
-            msg_to_broadc = my_encryption.pack(name + ': ' + msg)
+            msg_to_broadc = crypto.pack(name + ': ' + msg)
             client.send(msg_to_broadc)
     LOCK.release()
 
@@ -39,27 +41,27 @@ def handle_client(client, addr):
 
     # Welcome the client
     msg = 'Welcome to the chat program. Please enter your chosen name in the message field and press enter' # Please enter a chat channel (1 through 5) and press enter: '
-    client.sendall(my_encryption.pack(msg))
+    client.sendall(crypto.pack(msg))
 
     print('Getting name...')
-    name = my_encryption.unpack(client.recv(1024))
+    name = crypto.unpack(client.recv(1024))
 
     print('Name is ' + name)
 
-    if name == '{GHOST}' or name == '\quit':
+    if name == '{GHOST}':
         return
 
     LOCK.acquire()
     clients[client] = name
     LOCK.release()
 
-    client.sendall(my_encryption.pack('Hi {}, now you can start chatting with your friends'.format(name)))
+    client.sendall(crypto.pack('Hi {}, now you can start chatting with your friends'.format(name)))
 
     while True:
         try:
             received = client.recv(1024)
-            msg = my_encryption.unpack(received)
-            if msg == '\quit':
+            msg = crypto.unpack(received)
+            if msg == '{quit}':
                 print('! -- Client disconnected -- !')
 
                 LOCK.acquire()
@@ -98,7 +100,7 @@ def ghost_client():
     port = 6000
 
     s.connect((host, port))
-    s.send(my_encryption.pack('{GHOST}'))
+    s.send(crypto.pack('{GHOST}'))
     s.shutdown(socket.SHUT_RDWR)
     s.close()
 
