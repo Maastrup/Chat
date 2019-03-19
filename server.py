@@ -18,7 +18,7 @@ def broadcast(msg, name=None):
     print('Broadcasting to {} client(s)'.format(len(clients)))
     for client in clients:
         if name == None:
-            client.send(msg)
+            client.send(crypto.pack(msg))
         elif clients[client] != name:
             msg_to_broadc = crypto.pack(name + ': ' + msg)
             client.send(msg_to_broadc)
@@ -56,6 +56,7 @@ def handle_client(client, addr):
     LOCK.release()
 
     client.sendall(crypto.pack('Hi {}, now you can start chatting with your friends'.format(name)))
+    broadcast('{} joined the chatroom'.format(name))
 
     while True:
         try:
@@ -119,7 +120,7 @@ accept_thread.start()
 
 while True:
     command = input()
-    if command == '\quit':
+    if command == '{quit}':
         print('Server is shutting down.')
         print('Waiting for clients to disconnect...')
 

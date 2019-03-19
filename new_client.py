@@ -1,16 +1,18 @@
 #!/Users/Svampen/anaconda3/envs/chat/bin/python
 
 from tkinter import *
-from tkinter import messagebox
-from threading import Lock, Thread
 import socket
+from threading import Lock, Thread
+from my_encryption import MyAES
 
 root = Tk()
 root.title('Chit-chat')
 
 print_LOCK = Lock()
 curr_y = 0
-msg_spacing = 4
+msg_spacing = 6
+
+crypto = MyAES(b'Sixteen byte keySixteen byte key')
 
 
 def my_print(msg, sending=False):
@@ -25,29 +27,31 @@ def my_print(msg, sending=False):
         x = msg_list.winfo_width() # width of canvas
         my_msg.set('')
 
-    item_handler = msg_list.create_text(
+    item_handle = msg_list.create_text(
         x, curr_y,
         anchor=anchor,
         width=175,
         text=msg
     )
 
-    curr_y = msg_list.bbox(item_handler)[3] + msg_spacing
+    curr_y = msg_list.bbox(item_handle)[3] + msg_spacing
 
     print_LOCK.release()
 
 
 def send(event=None):
-    s.send(bytes(my_msg.get(), 'utf-8'))
-    my_print(my_msg.get(), True)
+    msg = my_msg.get()
+    s.send(crypto.pack(msg))
+    my_print(msg, True)
     # my_print(my_msg.get(), False)
 
 
 def receiver():
     while True:
         try:
-            received = s.recv(1024).decode()
-            my_print(received)
+            received = s.recv(1024)
+            text = crypto.unpack(received)
+            my_print(text)
         except OSError:
             print('! -- Disconnected -- !')
             return
@@ -55,7 +59,7 @@ def receiver():
 
 def on_closing():
     # if messagebox.askokcancel("Quit", "Do you want to quit?"):
-    s.send(bytes('\quit', 'utf-8'))
+    s.send(crypto.pack('{quit}'))
     s.close()
     root.destroy()
 
@@ -92,6 +96,7 @@ button = Button(
 )
 button.grid(column=1, row=1, sticky=N+W)
 
+root.protocol("WM_DELETE_WINDOW", on_closing)
 
 """CONNECTION SETUP"""
 s = socket.socket()
@@ -102,10 +107,11 @@ port = 6000
 s.connect((host, port))
 
 # Receives welcome msg
-my_print(s.recv(1024).decode())
+my_print(crypto.unpack(s.recv(1024)))
 
 recv_thread = Thread(target=receiver)
 recv_thread.start()
 
-root.protocol("WM_DELETE_WINDOW", on_closing)
+
+""" Start program """
 root.mainloop()

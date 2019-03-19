@@ -45,7 +45,7 @@ while True:
     msg = input('Your message: ')
 
     if msg == '{quit}':
-        s.send(bytes(msg, 'utf-8'))
+        s.send(crypto.pack(msg))
         s.shutdown(socket.SHUT_RDWR)
         s.close()
         break
