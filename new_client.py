@@ -1,9 +1,12 @@
-#!/Users/Svampen/anaconda3/envs/chat/bin/python
+#!/Users/Svampen/anaconda3/envs/chat/bin/python3.7
 
 from tkinter import *
-import socket
 from threading import Lock, Thread
-from my_encryption import MyAES
+from Crypto.Hash import SHA3_256
+import socket
+import my_encryption as crypto
+import pickle
+import secrets
 
 root = Tk()
 root.title('Chit-chat')
@@ -12,7 +15,7 @@ print_LOCK = Lock()
 curr_y = 0
 msg_spacing = 6
 
-crypto = MyAES(b'Sixteen byte keySixteen byte key')
+# key = b'Sixteen byte keySixteen byte key'
 
 
 def my_print(msg, sending=False):
@@ -41,7 +44,7 @@ def my_print(msg, sending=False):
 
 def send(event=None):
     msg = my_msg.get()
-    s.send(crypto.pack(msg))
+    s.send(crypto.pack(msg, key))
     my_print(msg, True)
     # my_print(my_msg.get(), False)
 
@@ -50,7 +53,7 @@ def receiver():
     while True:
         try:
             received = s.recv(1024)
-            text = crypto.unpack(received)
+            text = crypto.unpack(received, key)
             my_print(text)
         except OSError:
             print('! -- Disconnected -- !')
@@ -59,8 +62,11 @@ def receiver():
 
 def on_closing():
     # if messagebox.askokcancel("Quit", "Do you want to quit?"):
-    s.send(crypto.pack('{quit}'))
-    s.close()
+    try:
+        s.send(crypto.pack('{quit}', key))
+        s.close()
+    except BrokenPipeError:
+        print('Server not available at the moment')
     root.destroy()
 
 
@@ -106,8 +112,33 @@ port = 6000
 
 s.connect((host, port))
 
+s.send(bytes('{CLIENT}', 'utf-8'))
+
+""" Diffie-Hellman key exchange first thing after 
+    establishing a connection
+"""
+
+# Receive base, g, and prime modulus, p
+g, p = pickle.loads(s.recv(2048))
+
+print('g: {}, p: {}'.format(g, p))
+
+# g^a mod p
+a = secrets.randbits(128)
+A = pow(g, a, p)
+s.send(pickle.dumps(A))
+
+# receive servers exponential modulus
+B = pickle.loads(s.recv(1024))
+shared_secret = pow(B, a, p)
+
+print('Shared key:', shared_secret)
+
+key = SHA3_256.new(data=bytes(str(shared_secret), 'utf-8')).digest()
+
+
 # Receives welcome msg
-my_print(crypto.unpack(s.recv(1024)))
+my_print(crypto.unpack(s.recv(1024), key))
 
 recv_thread = Thread(target=receiver)
 recv_thread.start()

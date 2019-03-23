@@ -1,4 +1,4 @@
-#!/Users/Svampen/anaconda3/bin/python
+#!/Users/Svampen/anaconda3/envs/chat/bin/python3.7
 
 import shutil
 import socket
