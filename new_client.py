@@ -1,6 +1,7 @@
 #!/Users/Svampen/anaconda3/envs/chat/bin/python3.7
 
 from tkinter import *
+from tkinter import messagebox
 from threading import Lock, Thread
 from Crypto.Hash import SHA3_256
 import socket
@@ -46,7 +47,6 @@ def send(event=None):
     msg = my_msg.get()
     s.send(crypto.pack(msg, key))
     my_print(msg, True)
-    # my_print(my_msg.get(), False)
 
 
 def receiver():
@@ -54,14 +54,21 @@ def receiver():
         try:
             received = s.recv(1024)
             text = crypto.unpack(received, key)
-            my_print(text)
+            if text is '{server closed}':
+                if messagebox.askokcancel("Quit", "Do you want to quit?"):
+                    root.destroy()
+                    # return
+                else:
+                    my_print('None of your messages are sent, since server has shutdown')
+                    return
+            else:
+                my_print(text)
         except OSError:
             print('! -- Disconnected -- !')
             return
 
 
 def on_closing():
-    # if messagebox.askokcancel("Quit", "Do you want to quit?"):
     try:
         s.send(crypto.pack('{quit}', key))
         s.close()
@@ -132,9 +139,9 @@ s.send(pickle.dumps(A))
 B = pickle.loads(s.recv(1024))
 shared_secret = pow(B, a, p)
 
-print('Shared key:', shared_secret)
-
 key = SHA3_256.new(data=bytes(str(shared_secret), 'utf-8')).digest()
+
+print('Shared key:', key)
 
 
 # Receives welcome msg

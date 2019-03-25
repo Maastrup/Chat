@@ -71,9 +71,9 @@ def handle_client(client, addr):
     B = pow(g, b, p)
     client.sendall(pickle.dumps(B))
 
-    print('Shared key:', shared_secret)
-
     key = SHA3_256.new(data=bytes(str(shared_secret), 'utf-8')).digest()
+
+    print('Shared key:', key)
 
     # Welcome the client
     msg = 'Welcome to the chat program. Please enter your chosen name in the message field and press enter' # Please enter a chat channel (1 through 5) and press enter: '
@@ -96,6 +96,8 @@ def handle_client(client, addr):
     broadcast('{} joined the chatroom'.format(name))
 
     while True:
+        if not server_status:
+            return
         try:
             received = client.recv(1024)
             msg = crypto.unpack(received, key)

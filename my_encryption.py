@@ -75,12 +75,18 @@ def pack(plaintext, key):
     byte_string = bytes(plaintext, 'utf-8')
 
     ciphertext, tag = cipher.encrypt_and_digest(byte_string)
+    print(ciphertext.hex())
 
     return pickle.dumps((cipher.nonce, ciphertext, tag))
 
 
 def unpack(pickled_tuple, key):
-    tuple = pickle.loads(pickled_tuple)
+    try:
+        tuple = pickle.loads(pickled_tuple)
+        print(tuple[1].hex())
+    except EOFError:
+        print('Program is closing')
+        return
     cipher = AES.new(key, AES.MODE_EAX, nonce=tuple[0])
 
     try:
