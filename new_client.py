@@ -107,7 +107,7 @@ root.protocol("WM_DELETE_WINDOW", on_closing)
 """CONNECTION SETUP"""
 s = socket.socket()
 
-host = socket.gethostname()
+host = 'KJs-MacBook-Pro.local'
 port = 6000
 
 s.connect((host, port))
