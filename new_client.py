@@ -93,6 +93,12 @@ msg_list = Canvas(
 msg_list.grid(row=0, columnspan=2)
 
 scrollbar.config(command=msg_list.yview)
+msg_list.bind( # Makes msg_list scrollable when mouse is in the canvas
+    '<MouseWheel>',
+    lambda e: msg_list.yview_scroll(
+        -1 * e.delta,
+        'units')
+)
 
 my_msg = StringVar()
 my_msg.set('Type your message here')

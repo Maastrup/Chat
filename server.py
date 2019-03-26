@@ -10,7 +10,7 @@ import secrets
 """ Socket globals """
 clients = {}
 LOCK = threading.Lock()
-server_status = True
+server_up = True
 
 """ Diffie-Hellman base and prime """
 # key = b'Sixteen byte keySixteen byte key'
@@ -34,7 +34,7 @@ def broadcast(msg, name=None):
 
 
 def accept_clients():
-    while server_status:
+    while server_up:
         # Accept connection from the outside
         (clientsocket, address) = server_socket.accept()
         # Start thread to handle the client
@@ -97,7 +97,7 @@ def handle_client(client, addr):
     broadcast('{} joined the chatroom'.format(name))
 
     while True:
-        if not server_status:
+        if not server_up:
             return
         try:
             received = client.recv(1024)
@@ -125,6 +125,9 @@ def handle_client(client, addr):
             LOCK.release()
 
             return
+        except pickle.UnpicklingError:
+            print('Problem with unpickling received data.\n'
+                  'Data package was probably not received in full')
 
 
 def exit_handler():
@@ -163,7 +166,7 @@ while True:
         print('Server is shutting down.')
         print('Waiting for clients to disconnect...')
 
-        server_status = False
+        server_up = False
         ghost_client()
         accept_thread.join()
         server_socket.close()

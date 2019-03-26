@@ -75,7 +75,7 @@ def pack(plaintext, key):
     byte_string = bytes(plaintext, 'utf-8')
 
     ciphertext, tag = cipher.encrypt_and_digest(byte_string)
-    print(ciphertext.hex())
+    print('\nSent:', ciphertext.hex())
 
     return pickle.dumps((cipher.nonce, ciphertext, tag))
 
@@ -83,7 +83,7 @@ def pack(plaintext, key):
 def unpack(pickled_tuple, key):
     try:
         tuple = pickle.loads(pickled_tuple)
-        print(tuple[1].hex())
+        print('\nReceived:', tuple[1].hex())
     except EOFError:
         print('Program is closing')
         return
