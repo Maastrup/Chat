@@ -39,6 +39,8 @@ def my_print(msg, sending=False):
     )
 
     curr_y = msg_list.bbox(item_handle)[3] + msg_spacing
+    msg_list.config(scrollregion=msg_list.bbox('all'))
+    msg_list.yview('moveto', 1.0)
     print_LOCK.release()
 
 
@@ -108,7 +110,6 @@ button = Button(
 )
 button.grid(column=1, row=1, sticky=N+W)
 
-root.update()
 msg_list.config(scrollregion=msg_list.bbox('all'))
 root.protocol("WM_DELETE_WINDOW", on_closing)
 

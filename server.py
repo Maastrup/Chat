@@ -82,7 +82,6 @@ def handle_client(client, addr):
     print('Getting name...')
     name = crypto.unpack(client.recv(1024), key)
 
-
     if name == '{quit}':
         print('Client quit before choosing name')
         return
