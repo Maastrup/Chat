@@ -1,24 +1,36 @@
-#!/Users/Svampen/anaconda3/bin/python
+#!/Users/Svampen/anaconda3/envs/chat/bin/python3.7
 
+from Crypto.Hash import SHA3_256
 import socket
-from threading import Thread, Lock
+import threading
+import my_encryption as crypto
+import pickle
+import secrets
 
-
+""" Socket globals """
 clients = {}
-lock = Lock()
+LOCK = threading.Lock()
 server_status = True
+
+""" Diffie-Hellman base and prime """
+# key = b'Sixteen byte keySixteen byte key'
+p = crypto.gen_big_prime()
+g = crypto.gen_base()
+print('g: {}, p: {}'.format(g, p))
+base_and_prime = pickle.dumps((g, p))
 
 
 def broadcast(msg, name=None):
-    lock.acquire()
+    LOCK.acquire()
     print('Broadcasting to {} client(s)'.format(len(clients)))
     for client in clients:
-        if name == None:
-            client.send(msg)
-        elif clients[client] != name:
-            msg_to_broadc = name + b': ' + msg
+        key = clients[client][1]
+        if name is None:
+            client.send(crypto.pack(msg, key))
+        elif clients[client][0] != name:
+            msg_to_broadc = crypto.pack(name + ': ' + msg, key)
             client.send(msg_to_broadc)
-    lock.release()
+    LOCK.release()
 
 
 def accept_clients():
@@ -26,56 +38,92 @@ def accept_clients():
         # Accept connection from the outside
         (clientsocket, address) = server_socket.accept()
         # Start thread to handle the client
-        thread1 = Thread(target=handle_client, args=(clientsocket, address, ))
+        thread1 = threading.Thread(target=handle_client, args=(clientsocket, address, ))
         thread1.start()
 
 
 def handle_client(client, addr):
-    # clientIndex = len(clients)
+    print('Entity connected with address {}:{}'.format(addr[0], addr[1]))
 
-    print('Client connected with address {}:{}'.format(addr[0], addr[1]))
-
-    # Welcome the client
-    msg = 'Welcome to the chat program. Please enter your chosen name in the messagefield and press enter' # Please enter a chat channel (1 through 5) and press enter: '
-    client.sendall(bytes(msg, 'utf-8'))
-
-    name = client.recv(1024)
-
-    print('Name is \'{}\''.format(name))
-
-    if name == b'{GHOST}': # or name == b'\quit':
+    id = client.recv(1024).decode()
+    if id == '{GHOST}':
+        print('Entity was GHOST')
+        return
+    elif id == '{CLIENT}':
+        print('Entity is CLIENT')
+    else:
+        print('ID: {} is unknown. Exiting...'.format(id))
         return
 
-    lock.acquire()
-    clients[client] = name
-    lock.release()
+    """ Diffie-Hellman key exchange first thing after 
+        establishing a connection
+    """
+    # send base and prime
+    client.sendall(base_and_prime)
 
-    client.send(bytes('Hi {}, now you can start chatting with your friends'.format(name.decode()), 'utf-8'))
+    b = secrets.randbits(128)
+
+    # Receive A and compute A^b mod p as DH-key
+    A = pickle.loads(client.recv(1024))
+    shared_secret = pow(A, b, p)
+
+    # Compute g^b mod p and send to client
+    B = pow(g, b, p)
+    client.sendall(pickle.dumps(B))
+
+    key = SHA3_256.new(data=bytes(str(shared_secret), 'utf-8')).digest()
+
+    print('Shared key:', key)
+
+    # Welcome the client
+    msg = 'Welcome to the chat program. Please enter your chosen name in the message field and press enter' # Please enter a chat channel (1 through 5) and press enter: '
+    client.sendall(crypto.pack(msg, key))
+
+    print('Getting name...')
+    name = crypto.unpack(client.recv(1024), key)
+
+
+    if name == '{quit}':
+        print('Client quit before choosing name')
+        return
+
+    print('Name is ' + name)
+
+    LOCK.acquire()
+    clients[client] = (name, key)
+    LOCK.release()
+
+
+    client.sendall(crypto.pack('Hi {}, now you can start chatting with your friends'.format(name), key))
+    broadcast('{} joined the chatroom'.format(name))
 
     while True:
+        if not server_status:
+            return
         try:
             received = client.recv(1024)
-            if received.decode() == '\quit':
+            msg = crypto.unpack(received, key)
+            if msg == '{quit}':
                 print('! -- Client disconnected -- !')
 
-                lock.acquire()
+                LOCK.acquire()
                 del clients[client]
-                lock.release()
+                LOCK.release()
 
-                exit_msg = name + b' has left the chatroom'
+                exit_msg = name + ' has left the chatroom'
                 broadcast(exit_msg)
 
                 return
             else:
                 # msg = name + received
-                broadcast(received, clients[client])
+                broadcast(msg, clients[client][0])
 
         except OSError:
             print('! -- Client disconnected -- !')
 
-            lock.acquire()
+            LOCK.acquire()
             del clients[client]
-            lock.release()
+            LOCK.release()
 
             return
 
@@ -95,7 +143,6 @@ def ghost_client():
 
     s.connect((host, port))
     s.send(bytes('{GHOST}', 'utf-8'))
-    s.shutdown(socket.SHUT_RDWR)
     s.close()
 
 
@@ -108,12 +155,12 @@ server_socket.bind((socket.gethostname(), 6000))
 # Become a server by listening
 server_socket.listen(5)
 
-accept_thread = Thread(target=accept_clients)
+accept_thread = threading.Thread(target=accept_clients)
 accept_thread.start()
 
 while True:
     command = input()
-    if command == '\quit':
+    if command == '{quit}':
         print('Server is shutting down.')
         print('Waiting for clients to disconnect...')
 
@@ -123,3 +170,6 @@ while True:
         server_socket.close()
         print('Goodbye for now.')
         break
+    elif command == 'status':
+        print('Active threads: {}'.format(threading.active_count()))
+        print('Accept thread up: {}'.format(accept_thread.is_alive()))
