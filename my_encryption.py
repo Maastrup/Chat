@@ -2,6 +2,7 @@ from Crypto.Cipher import AES
 import secrets
 import random
 import pickle
+import sys
 
 
 # Rabin Miller testen, probabilistic
@@ -11,7 +12,10 @@ def rabin_miller(p, k):
     s = 0
     while r % 2 == 0:
         s += 1
-        r = r >> 1 # bitshifting to the right divides r by 2 but preserves int-type, floats screw up the test in my case
+        """ bitshifting to the right divides r by 2 but
+            preserves int-type, floats screws up the test
+            by lowering precision """
+        r = r >> 1
 
     for i in range(k):
         a = random.randrange(2, p - 1)
@@ -49,6 +53,7 @@ def gen_big_prime():
 
         count += 1
 
+    print('Found a prime in {} tries'.format(count))
     return p
 
 
@@ -61,11 +66,13 @@ def prime_factors(s, n):
         s.append(2)
         n = n >> 1 # We are sure n can be divided by 2 and through >> 1 we preserve n's int-status
 
+    print('')
+
     i = 3
     while n > 1:
         if n % i == 0:
             s.append(i)
-            n /= i
+            n //= i
         else:
             i += 2
 
@@ -82,15 +89,15 @@ def pack(plaintext, key):
 
 def unpack(pickled_tuple, key):
     try:
-        tuple = pickle.loads(pickled_tuple)
-        print('\nReceived:', tuple[1].hex())
+        nonce, ciphertext, tag = pickle.loads(pickled_tuple)
+        print('\nReceived:', ciphertext.hex())
     except EOFError:
         print('Program is closing')
         return
-    cipher = AES.new(key, AES.MODE_EAX, nonce=tuple[0])
+    cipher = AES.new(key, AES.MODE_EAX, nonce=nonce)
 
     try:
-        plaintext = cipher.decrypt_and_verify(tuple[1], tuple[2])
+        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
         return plaintext.decode()
     except ValueError:
         print('MAC check failed')
@@ -101,35 +108,3 @@ def unpack(pickled_tuple, key):
 
 
 """ Testing """
-
-# p = gen_big_prime()
-# g = secrets.randbits(128)
-# print('Prime modulus: {}\nBase: {}\n'.format(p, g))
-#
-# alice = secrets.randbits(128)
-# bob = secrets.randbits(128)
-#
-# print('Alice: {}\nBob: {}'.format(alice, bob))
-#
-# A = pow(g, alice, p)
-# B = pow(g, bob, p)
-#
-# print('A: {}\nB: {}'.format(A, B))
-#
-# alice_key = pow(B, alice, p)
-# bob_key = pow(A, bob, p)
-#
-# print('Key: {}'.format(alice_key))
-#
-# print(str(alice_key))
-#
-# alice_key = SHA3_256.new(data=bytes(str(alice_key), 'utf-8')).digest()
-# bob_key = SHA3_256.new(data=bytes(str(bob_key), 'utf-8')).digest()
-#
-# pt = 'Super krypteret besked æøå'
-# print(pt)
-#
-# send_obj = pack(pt, alice_key)
-# print(send_obj)
-#
-# print(unpack(send_obj, bob_key))
